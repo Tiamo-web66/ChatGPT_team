@@ -2,7 +2,7 @@
   "_说明": "复制此文件为 ChatGPT_team.config.local.json 并填入你的实际配置",
   "proxy_type": "static",
   "proxy": "http://127.0.0.1:7890",
-  "proxy_api_url": "https://white.1024proxy.com/white/api?region=JP&num=1&time=10&format=1&type=txt",
+  "proxy_api_url": "",
   "proxy_api_retry": 3,
   "proxy_chain_enabled": false,
   "proxy_chain_upstream_proxy": "HOST:PORT:USERNAME-region-JP-sid-{session}-t-5:PASSWORD",
