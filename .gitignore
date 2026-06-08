@@ -1,0 +1,21 @@
+# --- 虚拟环境 ---
+venv/
+__MACOSX/
+
+# --- 配置文件（敏感信息，不上传） ---
+ChatGPT_team.config.local.json
+ChatGPT_team.config.json
+
+# --- 运行时输出 ---
+registered_only.txt
+register_only_failed.txt
+chatgpt_sessions/
+codex_tokens/
+sub2api_tokens/
+sso_dumps/
+*.sub2api.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/

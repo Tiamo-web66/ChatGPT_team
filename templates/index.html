@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatGPT Team Dashboard</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --border: #2a2e3a;
+  --text: #d1d5db;
+  --muted: #6b7280;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --success: #10b981;
+  --fail: #ef4444;
+  --warn: #f59e0b;
+  --code-bg: #111318;
+  --radius: 8px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); height: 100vh; display: flex; flex-direction: column; }
+/* ── Header ── */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; height: 52px; flex-shrink: 0; }
+header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+header .stats { margin-left: auto; display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
+header .stats span { color: var(--text); font-weight: 600; }
+/* ── Tabs ── */
+nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 0; flex-shrink: 0; }
+nav button { background: none; border: none; color: var(--muted); padding: 10px 20px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; transition: all 0.15s; font-family: var(--font); }
+nav button:hover { color: var(--text); }
+nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+/* ── Main ── */
+main { flex: 1; overflow: hidden; display: flex; }
+.tab-panel { display: none; flex: 1; overflow: auto; padding: 20px 24px; }
+.tab-panel.active { display: flex; flex-direction: column; }
+/* ── Dashboard Layout ── */
+.dash-grid { display: grid; grid-template-columns: 320px 1fr; grid-template-rows: 1fr auto; gap: 16px; height: 100%; }
+.dash-controls { grid-column: 1; grid-row: 1 / 3; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.dash-progress { grid-column: 2; grid-row: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.dash-logs { grid-column: 2; grid-row: 2; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 300px; }
+/* ── Controls ── */
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+.form-group input, .form-group select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 8px 10px; font-size: 14px; font-family: var(--font); }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+.btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; font-family: var(--font); transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { background: var(--fail); color: #fff; }
+.btn-danger:hover { opacity: 0.85; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-row { display: flex; gap: 8px; }
+/* ── Progress ── */
+.progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.progress-header h3 { font-size: 14px; font-weight: 500; }
+.progress-nums { display: flex; gap: 20px; font-size: 13px; color: var(--muted); }
+.progress-bar-wrap { background: var(--bg); border-radius: 100px; height: 24px; overflow: hidden; display: flex; margin-bottom: 8px; }
+.progress-bar-success { background: var(--success); height: 100%; transition: width 0.3s; }
+.progress-bar-fail { background: var(--fail); height: 100%; transition: width 0.3s; }
+.progress-bar-pending { background: var(--border); height: 100%; flex: 1; transition: width 0.3s; }
+/* ── Logs ── */
+.logs-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.logs-header h3 { font-size: 14px; font-weight: 500; }
+.logs-header input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 4px 10px; font-size: 13px; width: 200px; font-family: var(--font); }
+.logs-body { flex: 1; overflow-y: auto; padding: 8px 0; font-family: var(--mono); font-size: 12px; line-height: 1.6; }
+.log-line { padding: 2px 16px; white-space: pre-wrap; word-break: break-all; display: flex; }
+.log-line .ts { color: var(--muted); margin-right: 8px; flex-shrink: 0; }
+.log-line .tag { margin-right: 8px; flex-shrink: 0; font-weight: 600; min-width: 50px; }
+.log-line.lvl-WARN { background: rgba(245,158,11,0.06); }
+.log-line.lvl-ERR { background: rgba(239,68,68,0.08); }
+.log-line.lvl-OK { color: var(--success); }
+.tag-Summary { color: var(--accent)!important; }
+.tag-Sub2API { color: #a78bfa; }
+.lvl-PING { display: none; }
+/* ── Token List ── */
+.token-toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+.token-toolbar input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 8px 12px; font-size: 14px; flex: 1; max-width: 400px; font-family: var(--font); }
+.token-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.token-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.token-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.token-table tr { cursor: pointer; transition: background 0.1s; }
+.token-table tr:hover { background: rgba(99,102,241,0.06); }
+.token-detail { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: none; }
+.token-detail.open { display: block; }
+.token-detail pre { background: var(--code-bg); padding: 12px; border-radius: 6px; overflow-x: auto; font-family: var(--mono); font-size: 13px; max-height: 300px; overflow-y: auto; }
+.copy-btn { cursor: pointer; color: var(--accent); font-size: 12px; margin-left: 8px; user-select: none; }
+.copy-btn:hover { color: var(--accent-hover); }
+/* ── Config Form ── */
+.config-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; }
+.config-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow-y: auto; }
+.config-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; }
+.config-preview pre { flex: 1; overflow: auto; background: var(--code-bg); padding: 12px; border-radius: 6px; font-family: var(--mono); font-size: 13px; white-space: pre-wrap; }
+.section-toggle { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; width: 100%; text-align: left; color: var(--text); cursor: pointer; font-size: 13px; font-family: var(--font); margin-bottom: 8px; }
+.section-toggle:hover { border-color: var(--accent); }
+.section-content { display: none; padding: 0 4px 12px; }
+.section-content.open { display: block; }
+.form-row { display: grid; grid-template-columns: 160px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row label { font-size: 13px; color: var(--muted); }
+.form-row input, .form-row select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 6px 10px; font-size: 13px; font-family: var(--font); }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--success); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 10; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ ChatGPT Team Dashboard</h1>
+  <div class="stats">
+    Token <span id="stat-tokens">-</span> &nbsp;|&nbsp;
+    会话 <span id="stat-sessions">-</span> &nbsp;|&nbsp;
+    运行中 <span id="stat-running">-</span>
+  </div>
+</header>
+
+<nav>
+  <button class="active" data-tab="dashboard">📊 仪表盘</button>
+  <button data-tab="tokens">🔑 Token 管理</button>
+  <button data-tab="config">⚙️ 配置</button>
+</nav>
+
+<main>
+<!-- ═══════════════════════ Dashboard ═══════════════════════ -->
+<section class="tab-panel active" id="tab-dashboard">
+<div class="dash-grid">
+  <div class="dash-controls">
+    <h3 style="font-size:14px;font-weight:500;">任务控制</h3>
+    <div class="form-group">
+      <label>任务类型</label>
+      <select id="task-type">
+        <option value="register">注册新账号</option>
+        <option value="check">检查 Token 套餐</option>
+      </select>
+    </div>
+    <div class="form-group" id="grp-total">
+      <label>账号数量</label>
+      <input id="task-total" type="number" value="1" min="1" max="500">
+    </div>
+    <div class="form-group">
+      <label>并发数</label>
+      <input id="task-workers" type="number" value="1" min="1" max="50">
+    </div>
+    <div class="form-group">
+      <label>代理 (留空用配置)</label>
+      <input id="task-proxy" type="text" placeholder="http://127.0.0.1:7890">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-start" onclick="startTask()">▶ 开始</button>
+      <button class="btn btn-danger" id="btn-stop" onclick="stopTask()" disabled>⏹ 停止</button>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:var(--muted);" id="task-status-text">空闲</div>
+  </div>
+  <div class="dash-progress">
+    <div class="progress-header">
+      <h3>进度</h3>
+      <div class="progress-nums">
+        <span style="color:var(--success);">✅ <span id="prog-success">0</span></span>
+        <span style="color:var(--fail);">❌ <span id="prog-fail">0</span></span>
+        <span>📋 <span id="prog-total">0</span>/<span id="prog-submitted">0</span></span>
+      </div>
+    </div>
+    <div class="progress-bar-wrap" id="progress-bar-wrap">
+      <div class="progress-bar-success" id="bar-success" style="width:0%"></div>
+      <div class="progress-bar-fail" id="bar-fail" style="width:0%"></div>
+      <div class="progress-bar-pending" id="bar-pending"></div>
+    </div>
+  </div>
+  <div class="dash-logs">
+    <div class="logs-header">
+      <h3>实时日志</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="log-filter" placeholder="搜索日志…" oninput="filterLogs()">
+        <button class="btn btn-outline btn-sm" id="btn-pause-logs" onclick="toggleLogPause()">⏸ 暂停</button>
+        <button class="btn btn-outline btn-sm" onclick="clearLogs()">🗑 清空</button>
+      </div>
+    </div>
+    <div class="logs-body" id="logs-body"></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════ Tokens ═══════════════════════ -->
+<section class="tab-panel" id="tab-tokens">
+<div class="token-toolbar">
+  <input type="text" id="token-search" placeholder="搜索邮箱…" oninput="loadTokens()">
+  <button class="btn btn-outline btn-sm" onclick="loadTokens()">🔄 刷新</button>
+  <button class="btn btn-outline btn-sm" onclick="exportTokens()">📥 导出全部</button>
+</div>
+<table class="token-table">
+  <thead><tr><th>邮箱</th><th>类型</th><th>来源</th><th>保存时间</th><th>RT</th><th>AT</th><th>操作</th></tr></thead>
+  <tbody id="token-tbody"></tbody>
+</table>
+<div class="token-detail" id="token-detail">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="font-size:14px;" id="detail-title">详情</h3>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('token-detail').classList.remove('open')">✕ 关闭</button>
+  </div>
+  <pre id="detail-content"></pre>
+</div>
+</section>
+
+<!-- ═══════════════════════ Config ═══════════════════════ -->
+<section class="tab-panel" id="tab-config">
+<div class="config-layout">
+  <div class="config-form" id="config-form">
+    <h3 style="font-size:14px;font-weight:500;margin-bottom:12px;">配置编辑</h3>
+    <div id="config-sections"></div>
+    <button class="btn btn-primary" onclick="saveConfig()" style="margin-top:12px;">💾 保存配置</button>
+    <span id="config-saved" style="font-size:12px;color:var(--success);margin-left:12px;display:none;">✓ 已保存</span>
+  </div>
+  <div class="config-preview">
+    <h3 style="font-size:14px;font-weight:500;margin-bottom:8px;">JSON 预览</h3>
+    <pre id="config-preview-text"></pre>
+  </div>
+</div>
+</section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════ Global State ═══════════════════
+let currentTaskId = null;
+let logsPaused = false;
+let allLogs = [];
+const MAX_LOGS = 1000;
+
+// ═══════════════════ Nav ═══════════════════
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'tokens') loadTokens();
+    if (btn.dataset.tab === 'config') loadConfig();
+  });
+});
+
+// ═══════════════════ Stats ═══════════════════
+async function refreshStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('stat-tokens').textContent = d.token_count;
+    document.getElementById('stat-sessions').textContent = d.session_count;
+    document.getElementById('stat-running').textContent = d.running_tasks;
+  } catch(e) {}
+}
+refreshStats();
+setInterval(refreshStats, 5000);
+
+// ═══════════════════ Task type toggle ═══════════════════
+document.getElementById('task-type').addEventListener('change', function() {
+  document.getElementById('grp-total').style.display = this.value === 'register' ? '' : 'none';
+});
+
+// ═══════════════════ Task Control ═══════════════════
+async function startTask() {
+  const type = document.getElementById('task-type').value;
+  const workers = parseInt(document.getElementById('task-workers').value) || 1;
+  const proxy = document.getElementById('task-proxy').value.trim() || null;
+  let body = { workers, proxy };
+  let url = '';
+
+  if (type === 'register') {
+    body.total = parseInt(document.getElementById('task-total').value) || 1;
+    url = '/api/tasks/register';
+  } else {
+    url = '/api/tasks/check';
+  }
+
+  try {
+    const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.ok) {
+      currentTaskId = d.task_id;
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-stop').disabled = false;
+      document.getElementById('task-status-text').textContent = '⏳ 运行中… task=' + d.task_id;
+      resetProgress();
+    }
+  } catch(e) {
+    showToast('启动失败: ' + e.message);
+  }
+}
+
+async function stopTask() {
+  if (!currentTaskId) return;
+  try {
+    await fetch('/api/tasks/' + currentTaskId + '/stop', { method: 'POST' });
+    document.getElementById('btn-stop').disabled = true;
+    document.getElementById('task-status-text').textContent = '⏹ 已请求停止';
+  } catch(e) {}
+}
+
+function resetProgress() {
+  document.getElementById('prog-success').textContent = '0';
+  document.getElementById('prog-fail').textContent = '0';
+  document.getElementById('prog-total').textContent = '0';
+  document.getElementById('prog-submitted').textContent = '0';
+  document.getElementById('bar-success').style.width = '0%';
+  document.getElementById('bar-fail').style.width = '0%';
+}
+
+// ═══════════════════ Logs ═══════════════════
+function addLog(ts, level, tag, message) {
+  allLogs.push({ts, level, tag, message});
+  if (allLogs.length > MAX_LOGS) allLogs.shift();
+  if (logsPaused) return;
+
+  const filter = document.getElementById('log-filter').value.toLowerCase();
+  if (filter && !(tag.toLowerCase().includes(filter) || message.toLowerCase().includes(filter))) return;
+
+  const el = document.createElement('div');
+  el.className = 'log-line lvl-' + level;
+  el.innerHTML = `<span class="ts">${ts}</span><span class="tag tag-${tag}">[${tag}]</span><span>${escapeHtml(message)}</span>`;
+  const body = document.getElementById('logs-body');
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+}
+
+function clearLogs() { allLogs = []; document.getElementById('logs-body').innerHTML = ''; }
+function toggleLogPause() {
+  logsPaused = !logsPaused;
+  const btn = document.getElementById('btn-pause-logs');
+  btn.textContent = logsPaused ? '▶ 继续' : '⏸ 暂停';
+  if (!logsPaused) { rebuildLogs(); }
+}
+function filterLogs() { rebuildLogs(); }
+function rebuildLogs() {
+  const body = document.getElementById('logs-body');
+  body.innerHTML = '';
+  const filter = document.getElementById('log-filter').value.toLowerCase();
+  for (const l of allLogs) {
+    if (filter && !(l.tag.toLowerCase().includes(filter) || l.message.toLowerCase().includes(filter))) continue;
+    const el = document.createElement('div');
+    el.className = 'log-line lvl-' + l.level;
+    el.innerHTML = `<span class="ts">${l.ts}</span><span class="tag tag-${l.tag}">[${l.tag}]</span><span>${escapeHtml(l.message)}</span>`;
+    body.appendChild(el);
+  }
+  body.scrollTop = body.scrollHeight;
+}
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ═══════════════════ WebSocket ═══════════════════
+function connectWS(path, onMsg) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  let ws;
+  function connect() {
+    ws = new WebSocket(proto + '://' + location.host + path);
+    ws.onmessage = e => { try { onMsg(JSON.parse(e.data)); } catch(_) {} };
+    ws.onclose = () => { setTimeout(connect, 2000); };
+  }
+  connect();
+  return { close: () => { if (ws) ws.close(); } };
+}
+
+connectWS('/ws/logs', d => {
+  if (d.level === 'PING') return;
+  addLog(d.ts || '', d.level || 'INFO', d.tag || '', d.message || '');
+  // Refresh stats when summary lines appear
+  if (d.tag === 'Summary') refreshStats();
+  // Detect task completion
+  if (d.tag === 'Summary' && (d.message.includes('完成') || d.message.includes('HAR注册模式完成'))) {
+    document.getElementById('btn-start').disabled = false;
+    document.getElementById('btn-stop').disabled = true;
+    document.getElementById('task-status-text').textContent = '✓ 完成';
+    currentTaskId = null;
+  }
+});
+
+connectWS('/ws/progress', d => {
+  if (d.type === 'ping') return;
+  document.getElementById('prog-success').textContent = d.success || 0;
+  document.getElementById('prog-fail').textContent = d.fail || 0;
+  document.getElementById('prog-submitted').textContent = d.submitted || 0;
+  document.getElementById('prog-total').textContent = d.total || 0;
+  const total = d.total || 1;
+  const done = (d.success || 0) + (d.fail || 0);
+  const pctS = total ? ((d.success || 0) / total * 100) : 0;
+  const pctF = total ? ((d.fail || 0) / total * 100) : 0;
+  document.getElementById('bar-success').style.width = pctS + '%';
+  document.getElementById('bar-fail').style.width = pctF + '%';
+});
+
+// ═══════════════════ Token Management ═══════════════════
+async function loadTokens() {
+  const search = document.getElementById('token-search').value;
+  try {
+    const r = await fetch('/api/tokens?search=' + encodeURIComponent(search));
+    const d = await r.json();
+    const tbody = document.getElementById('token-tbody');
+    tbody.innerHTML = d.items.map(t => `
+      <tr onclick="showTokenDetail('${encodeURIComponent(t.email)}')">
+        <td>${escapeHtml(t.email)}</td>
+        <td>${t.type || '-'}</td>
+        <td>${t.token_source || '-'}</td>
+        <td>${t.saved_at ? t.saved_at.slice(0,16) : '-'}</td>
+        <td>${t.has_rt ? '✅' : '❌'}</td>
+        <td>${t.has_at ? '✅' : '❌'}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();deleteToken('${escapeHtml(t.email)}')">🗑</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function showTokenDetail(email) {
+  try {
+    const r = await fetch('/api/tokens/' + email);
+    const d = await r.json();
+    document.getElementById('detail-title').textContent = '🔑 ' + email;
+    document.getElementById('detail-content').textContent = JSON.stringify(d.data, null, 2);
+    document.getElementById('token-detail').classList.add('open');
+    document.getElementById('token-detail').scrollIntoView({behavior:'smooth'});
+  } catch(e) { showToast('获取详情失败: ' + e.message); }
+}
+
+async function deleteToken(email) {
+  if (!confirm('确定删除 ' + email + ' 的 token？')) return;
+  try {
+    await fetch('/api/tokens/' + encodeURIComponent(email), { method: 'DELETE' });
+    showToast('已删除 ' + email);
+    loadTokens();
+    refreshStats();
+  } catch(e) { showToast('删除失败: ' + e.message); }
+}
+
+async function exportTokens() {
+  try {
+    const r = await fetch('/api/tokens?limit=9999');
+    const d = await r.json();
+    const lines = d.items.map(t => t.email + '----' + (t.type||'')).join('\n');
+    const blob = new Blob([lines], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tokens_export_' + new Date().toISOString().slice(0,10) + '.txt';
+    a.click();
+  } catch(e) { showToast('导出失败'); }
+}
+
+// ═══════════════════ Config Management ═══════════════════
+const CONFIG_SECTIONS = {
+  '🔌 代理配置': ['proxy_type', 'proxy', 'proxy_api_url', 'proxy_api_retry'],
+  '⛓ 链式代理': ['proxy_chain_enabled', 'proxy_chain_upstream_proxy', 'proxy_chain_dynamic_per_account', 'proxy_chain_register_region', 'proxy_chain_payment_region'],
+  '📤 Sub2API': ['sub2api_auto_upload', 'sub2api_admin_api_key', 'sub2api_base_url', 'sub2api_group_names', 'sub2api_group_ids', 'sub2api_platform', 'sub2api_upstream_base_url', 'sub2api_concurrency', 'sub2api_priority', 'sub2api_pool_mode', 'sub2api_pool_mode_retry_count'],
+};
+const CONFIG_LABELS = {
+  proxy_type: '代理类型 (static/dynamic)', proxy: '代理地址', proxy_api_url: '代理提取 API', proxy_api_retry: 'API 重试次数',
+  proxy_chain_enabled: '启用链式代理', proxy_chain_upstream_proxy: '上游代理模板', proxy_chain_dynamic_per_account: '每账号独立 session',
+  proxy_chain_register_region: '注册区域', proxy_chain_payment_region: '支付区域',
+  sub2api_auto_upload: '启用自动上传', sub2api_admin_api_key: '管理员 API Key', sub2api_base_url: 'Sub2API 地址',
+  sub2api_group_names: '分组名称 (JSON数组)', sub2api_group_ids: '分组 ID (JSON数组)', sub2api_platform: '平台类型',
+  sub2api_upstream_base_url: '上游 API 地址', sub2api_concurrency: '并发数', sub2api_priority: '优先级',
+  sub2api_pool_mode: '池模式', sub2api_pool_mode_retry_count: '池模式重试次数',
+};
+
+let _currentConfig = {};
+
+async function loadConfig() {
+  try {
+    const r = await fetch('/api/config');
+    const d = await r.json();
+    _currentConfig = d.config || {};
+    renderConfigForm(_currentConfig);
+    updateConfigPreview();
+  } catch(e) {}
+}
+
+function renderConfigForm(cfg) {
+  const container = document.getElementById('config-sections');
+  let html = '';
+  for (const [sectionTitle, keys] of Object.entries(CONFIG_SECTIONS)) {
+    html += `<button class="section-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.classList.toggle('open')">${sectionTitle}</button>`;
+    html += '<div class="section-content open">';
+    for (const k of keys) {
+      const val = cfg[k] !== undefined ? cfg[k] : '';
+      const label = CONFIG_LABELS[k] || k;
+      if (k === 'sub2api_group_ids' || k === 'sub2api_group_names') {
+        html += `<div class="form-row full"><label>${label}</label><input data-key="${k}" value="${escapeHtml(JSON.stringify(val))}" oninput="updateConfigPreview()"></div>`;
+      } else if (k === 'proxy_type' || k === 'sub2api_pool_mode' || k === 'sub2api_platform') {
+        html += `<div class="form-row"><label>${label}</label><select data-key="${k}" oninput="updateConfigPreview()">`;
+        const opts = k === 'proxy_type' ? ['static','dynamic'] : k === 'sub2api_pool_mode' ? ['random','round_robin'] : ['anthropic','openai','gemini','antigravity'];
+        html += opts.map(o => `<option ${val===o?'selected':''}>${o}</option>`).join('');
+        html += '</select></div>';
+      } else if (typeof val === 'boolean') {
+        html += `<div class="form-row"><label>${label}</label><select data-key="${k}" oninput="updateConfigPreview()"><option ${val?'selected':''}>true</option><option ${!val?'selected':''}>false</option></select></div>`;
+      } else {
+        html += `<div class="form-row"><label>${label}</label><input data-key="${k}" value="${escapeHtml(String(val))}" oninput="updateConfigPreview()"></div>`;
+      }
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function updateConfigPreview() {
+  const result = {};
+  document.querySelectorAll('#config-sections [data-key]').forEach(el => {
+    const k = el.dataset.key;
+    let v = el.value;
+    // Parse arrays and booleans
+    if (k === 'sub2api_group_ids' || k === 'sub2api_group_names') {
+      try { v = JSON.parse(v); } catch(_) { v = []; }
+    } else if (el.tagName === 'SELECT') {
+      v = v === 'true' ? true : v === 'false' ? false : v;
+    } else if (!isNaN(Number(v)) && v !== '' && k.includes('retry') || k.includes('concurrency') || k.includes('priority')) {
+      v = Number(v);
+    }
+    result[k] = v;
+  });
+  _currentConfig = result;
+  document.getElementById('config-preview-text').textContent = JSON.stringify(result, null, 2);
+}
+
+async function saveConfig() {
+  updateConfigPreview();
+  try {
+    const r = await fetch('/api/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_currentConfig) });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('config-saved').style.display = 'inline';
+      setTimeout(() => { document.getElementById('config-saved').style.display = 'none'; }, 2000);
+      showToast('配置已保存');
+    }
+  } catch(e) { showToast('保存失败: ' + e.message); }
+}
+
+// ═══════════════════ Toast ═══════════════════
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ═══════════════════ Init ═══════════════════
+loadTokens();
+</script>
+</body>
+</html>
