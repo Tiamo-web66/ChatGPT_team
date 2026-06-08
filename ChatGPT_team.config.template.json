@@ -1,7 +1,7 @@
 {
   "_说明": "复制此文件为 ChatGPT_team.config.local.json 并填入你的实际配置",
   "proxy_type": "static",
-  "proxy": "http://127.0.0.1:7890",
+  "proxy": "",
   "proxy_api_url": "",
   "proxy_api_retry": 3,
   "proxy_chain_enabled": false,
